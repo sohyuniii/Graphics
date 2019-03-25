@@ -7,3 +7,7 @@
 - ggplot2 (2nd Ed) – H. Wickham – Springer
 - R for data science (R4DS) – Grolemund, Wickham - O’Reilly
 - [Handbook of Data Visualization (HDV)– Chen, Hardle, and Unwin - Springer](https://www.amazon.de/Handbook-Visualization-Handbooks-Computational-Statistics/dp/3540330364)
+
+#### 3.
+- Ex2 : Divvy (따릉이 같은 시카고의 공공 자전거 대여 제도) [Data](https://www.divvybikes.com/system-data)
+
