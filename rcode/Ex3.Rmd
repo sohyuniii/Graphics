@@ -1,0 +1,63 @@
+---
+title: "Ex-numbat"
+author: "IMSOHYUN"
+date: "2019년 4월 26일"
+output: github_document
+---
+
+## Load Data
+```{r setup, warning=FALSE}
+library(readr)
+library(tidyverse)
+library(ggthemes)
+library(ggpubr)
+setwd("C:/Users/user/Desktop/I/ewha2/Graphics")
+numbat <- read_csv("numbat.csv") # dim (4000,11)
+attach(numbat)
+names(numbat)
+table(numbat$group)
+```
+
+
+## corrplot
+```{r warning=FALSE}
+library("ggcorrplot")
+x_var <- numbat[,-11]
+corr <- round(cor(x_var), 1)
+ggcorrplot(corr, p.mat = cor_pmat(x_var),
+           hc.order = TRUE, type = "lower",
+           color = c("#FC4E07", "white", "#00AFBB"),
+           outline.col = "white", lab = TRUE)
+```
+
+
+## density plot
+```{r warning=FALSE}
+my.den <- function(var){
+  ggdensity(numbat, x = var, fill = "group", color ="group",
+            palette = c("#4ccd97", "#f0ed51"),ylab=FALSE)
+}
+
+figure <- ggarrange(my.den("x1"),my.den("x2"),my.den("x3"),my.den("x4"),
+                    my.den("x5"),my.den("x6"),my.den("x7"),my.den("x8"),
+                    my.den("x9"),my.den("x10"),
+                    common.legend = TRUE, legend="bottom",
+                    ncol=4,nrow=3)
+
+annotate_figure(figure,
+                top = text_grob("Density plot",face = "bold", size = 16)  )
+```
+
+
+## scatter plot
+```{r warning=FALSE}
+s1 <- ggplot(numbat) + geom_point(aes(x4,x7,col=group))  
+
+library(ggforce)
+s2 <- ggplot(numbat, aes(x4,x7, colour = group)) +
+  geom_point() + facet_zoom(x = group == "A", zoom.data = group == "A")
+s <- ggarrange(s1,s2,ncol=2,common.legend = TRUE,legend="bottom")
+annotate_figure(s, top = text_grob("Scater plot of x4 & x7",face = "bold", size = 16))
+```
+
+![Numbat](C:/Users/user/Desktop/I/ewha2/Graphics/Numbat.jpg){width=70%}
