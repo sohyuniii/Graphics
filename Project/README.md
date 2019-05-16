@@ -5,3 +5,7 @@
 - [19.05.09] 치킨, 중국집 데이터를 합쳐 총 165,397개의 관측치로 데이터 확정! 
 - [19.05.10] 구별 일별 날씨 데이터(최저기온(°C),최고기온(°C),일강수량(mm),평균 풍속(m/s)) 기상청에서 다운
 - [19.05.16] 날씨에 결측치 발견, 미세먼지 크롤링 
+
+### Data
+- [기상자료개방포털 - 방재기상관측](https://data.kma.go.kr/data/grnd/selectAwsRltmList.do?pgmNo=56)
+- [기상자료개방포털 - 황사일수](https://data.kma.go.kr/climate/yellowDust/selectYellowDustDayChart.do?pgmNo=112)
