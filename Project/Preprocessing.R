@@ -21,9 +21,11 @@ rm(chicken,cfood)
 delivery <- delivery[,-5]
 names(delivery)
 colnames(delivery) <- c('date','yoil','sex','age','gu','dong','type','call')
-delivery$date <- as.numeric(delivery$date)
-delivery$month = substr(as.character(date),5,6)
-delivery$day = substr(date,7,8)
+str(delivery)
+
+delivery$date <- as.character(delivery$date)
+delivery$month <- as.numeric(substr(delivery$date,5,6))
+delivery$day <- as.numeric(substr(delivery$date,7,8))
 
 ###### Data2 -> weather ######
 gu_id <- read_csv("gugucon.csv")
@@ -34,4 +36,10 @@ total <- merge(gu_id,weather,on="id")
 total$month <- as.numeric(substr(total$date,6,7))
 total$day <- as.numeric(substr(total$date,9,10))
 
-df = read.csv("yellowDust.csv")
+total <- total %>% arrange(date)
+filter(total %>% count(date), n!=25)
+unique(total$district)
+unique(filter(total,date=="2019-01-05")$district) # 금천구
+unique(filter(total,date=="2019-01-06")$district) # 금천구
+unique(filter(total,date=="2019-03-21")$district) # 동작구
+
