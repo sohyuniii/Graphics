@@ -14,9 +14,11 @@ setwd("C:/Users/user/Desktop/I/ewha2/Graphics/Project/Data")
 options("scipen" = 100)
 
 call <- read.csv("CALL_TOTAL.csv",stringsAsFactors = FALSE)
-weather <- read.csv('weather_TOTAL.csv')
 call$month <- paste0(call$month,"월")
-weather$month <- paste0(weather$month,"월")
+
+ggplot(data=call, aes(x=gu, y=call, fill=type)) + 
+  geom_bar(position = 'dodge', stat='identity')
+
 
 call %>% group_by(sex,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
   ggplot(mapping = aes(x = type, y = sex)) + 
@@ -30,9 +32,15 @@ call %>% group_by(age,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>
   scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
   guides(fill = guide_legend(title = "통화건수", title.position = "top"))
 
+call %>% group_by(yoil,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
+  ggplot(mapping = aes(x = type, y = yoil)) + 
+  geom_tile(mapping = aes(fill = sum.call)) +
+  scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
+  guides(fill = guide_legend(title = "통화건수", title.position = "top"))
+
 call$yoil <- factor(call$yoil, levels=c("월","화","수","목","금","토","일"))
 
-month_call <- call %>% group_by(month,yoil,week) %>% summarize(call = sum(call, na.rm = TRUE))
+month_call <- call %>% group_by(type,month,yoil,week) %>% summarize(call = sum(call, na.rm = TRUE))
 month_call$week <- 
   factor(month_call$week, levels=rev(sort(unique(month_call$week))))
 
@@ -40,7 +48,7 @@ ggplot(data = month_call, aes(x = yoil, y = week)) +
   geom_tile(aes(fill = call)) + 
   coord_equal(ratio = 1) + 
   scale_fill_viridis(option="magma") +
-  facet_wrap(~month, ncol = 3) +
+  facet_wrap(type~month, ncol = 3) +
   theme_tufte(base_family = "Helvetica") +
   # hide y-axis ticks and labels
   theme(axis.ticks.y = element_blank()) +
@@ -58,20 +66,6 @@ ggplot(data = month_call, aes(x = yoil, y = week)) +
   ggtitle("[ 2019년 일자별 배달건수 ]") + 
   theme(plot.title = element_text(size = "16", hjust = 0.5))
 
-ggplot(weather) +
-  geom_density_ridges(aes(x = mean.tem, y = month,group=month))
-
-ggplot(weather, aes(x = mean.tem, y = month, fill=factor(..quantile..))) +
-  stat_density_ridges(
-    geom = "density_ridges_gradient", calc_ecdf = TRUE,
-    quantiles = 4, quantile_lines = TRUE ) +
-  scale_fill_viridis(discrete = TRUE, name = "Quartiles") +
-  theme_tufte(base_family = "Helvetica")
-
-table(call$age)
-table(call$sex)
-table(call$gu) ; length(unique(call$gu))
-
 ######### Map ######### 
 
 ll <- read.csv('seoul.csv')
@@ -80,26 +74,16 @@ dong <- read_csv('id_dong.csv')
 dong <- dong[,-3]
 colnames(dong) <- c("id","dong","lat","lon")
 
-my.map <- function(food,opt){
-  t = call %>% filter(type==food) %>%
-    group_by(gu) %>%
-    summarize(sum.call = sum(call, na.rm = TRUE))
-  total <- merge(t,rr,by='gu',all=FALSE)
-  seoul <- merge(ll, total, by='id')
-  
-  ggplot() + theme_void() +
-    scale_fill_viridis(option = opt) + 
-    geom_polygon(data=seoul,alpha=.75,
-                 aes(x=long, y=lat, group=group, fill=sum.call)) 
-    
-}
-my.map("중국집","D") # 강남구 1등
-my.map("피자","D") # 강서구 1등
-my.map("치킨","D") # 강서구 1등
-figure <- ggarrange(my.map("치킨","D"),my.map("피자","D"),
-                    common.legend = TRUE, legend="bottom",ncol=2)
-annotate_figure(figure,
-                top = text_grob("Density plot",face = "bold", size = 16))  
+t = call %>% 
+  group_by(gu,type) %>%
+  summarize(sum.call = sum(call, na.rm = TRUE))
+total <- merge(t,rr,by='gu',all=FALSE)
+seoul <- merge(ll, total, by='id')
+ggplot() + theme_void() +
+  scale_fill_viridis(option = 'D') + 
+  geom_polygon(data=seoul,alpha=.75,
+               aes(x=long, y=lat, group=group, fill=sum.call)) +
+  facet_wrap(~type)
 
 gangnam_ch <- call %>% filter(gu=="강남구" & type=="중국집") %>% 
       group_by(dong) %>% summarise(call = sum(call, na.rm = TRUE))
