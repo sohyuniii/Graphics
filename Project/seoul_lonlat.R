@@ -7,7 +7,7 @@ library(rgdal)
 setwd("C:/Users/user/Desktop/I/ewha2/Graphics/Project")
 
 # 구글 지도 API 인증키를 등록
-register_google(key ='AIzaSyCOGOjnN1pOl8FmyscQhF5Nvn7KvN31Eb4')
+register_google(key ='')
 qmap("seoul", zoom = 11, maptype ='roadmap',color='bw')
 
 #################################################################
