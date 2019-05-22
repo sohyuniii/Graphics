@@ -1,5 +1,6 @@
 library(readr)
 library(dplyr)
+library(data.table)
 setwd("C:/Users/user/Desktop/I/ewha2/Graphics/Project/Data")
 
 ###### Data1 -> delivery ######
@@ -38,7 +39,13 @@ str(delivery)
 delivery$date <- as.character(delivery$date)
 delivery$month <- as.numeric(substr(delivery$date,5,6))
 delivery$day <- as.numeric(substr(delivery$date,7,8))
+
+delivery$date <- as.character(delivery$date)
+delivery$date <- paste(substr(delivery$date,1,4),substr(delivery$date,5,6),substr(delivery$date,7,8), sep = "-")
+delivery$week <- week(delivery$date)
+
 write.csv(delivery,"CALL_TOTAL.csv")
+
 
 ###### Data2 -> weather ######
 gu_id <- read_csv("gugucon.csv")
