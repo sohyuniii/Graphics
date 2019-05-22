@@ -4,60 +4,129 @@ library(raster)
 library(rgeos)
 library(maptools)
 library(rgdal)
-
 library(readr)
 library(dplyr)
 library(viridis)
+library(ggpubr)
+library(ggthemes)
+library(ggridges)
 setwd("C:/Users/user/Desktop/I/ewha2/Graphics/Project/Data")
-chicken1 <- read_csv("CALL_CHICKEN_01MONTH.csv")
-chicken2 <- read_csv("CALL_CHICKEN_02MONTH.csv")
-chicken3 <- read_csv("CALL_CHICKEN_03MONTH.csv")
-chicken <- rbind(chicken1,chicken2,chicken3)
-rm(chicken1,chicken2,chicken3)
+options("scipen" = 100)
 
-cfood1 <- read_csv('CALL_CFOOD_01MONTH.csv')
-cfood2 <- read_csv('CALL_CFOOD_02MONTH.csv')
-cfood3 <- read_csv('CALL_CFOOD_03MONTH.csv')
-cfood <- rbind(cfood1,cfood2,cfood3)
-rm(cfood1,cfood2,cfood3)
+call <- read.csv("CALL_TOTAL.csv",stringsAsFactors = FALSE)
+weather <- read.csv('weather_TOTAL.csv')
+call$month <- paste0(call$month,"월")
+weather$month <- paste0(weather$month,"월")
 
-food <- rbind(chicken,cfood)
-rm(chicken,cfood)
-write.csv(food,'food.csv')
+call %>% group_by(sex,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
+  ggplot(mapping = aes(x = type, y = sex)) + 
+  geom_tile(mapping = aes(fill = sum.call)) +
+  scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
+  guides(fill = guide_legend(title = "통화건수", title.position = "top"))
 
-length(unique(food$기준일)) # 90
-table(food$성별)
-table(food$연령대)
-table(food$업종)
-table(food$시군구)
+call %>% group_by(age,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
+  ggplot(mapping = aes(x = type, y = age)) + 
+  geom_tile(mapping = aes(fill = sum.call)) +
+  scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
+  guides(fill = guide_legend(title = "통화건수", title.position = "top"))
+
+call$yoil <- factor(call$yoil, levels=c("월","화","수","목","금","토","일"))
+
+month_call <- call %>% group_by(month,yoil,week) %>% summarize(call = sum(call, na.rm = TRUE))
+month_call$week <- 
+  factor(month_call$week, levels=rev(sort(unique(month_call$week))))
+
+ggplot(data = month_call, aes(x = yoil, y = week)) + 
+  geom_tile(aes(fill = call)) + 
+  coord_equal(ratio = 1) + 
+  scale_fill_viridis(option="magma") +
+  facet_wrap(~month, ncol = 3) +
+  theme_tufte(base_family = "Helvetica") +
+  # hide y-axis ticks and labels
+  theme(axis.ticks.y = element_blank()) +
+  theme(axis.text.y = element_blank()) +
+  # hide main x and y-axis titles
+  theme(axis.title.x = element_blank()) + 
+  theme(axis.title.y = element_blank()) +
+  # move x-axis labels (week names) to top, hide ticks
+  scale_x_discrete(position = "top") +
+  theme(axis.ticks.x = element_blank()) +
+  # move panel title (month names) outside (above week names)
+  theme(strip.placement = "outside") +
+  theme(strip.text.x = element_text(size = "14", hjust = 0)) +
+  # center-aligned plot title
+  ggtitle("[ 2019년 일자별 배달건수 ]") + 
+  theme(plot.title = element_text(size = "16", hjust = 0.5))
+
+ggplot(weather) +
+  geom_density_ridges(aes(x = mean.tem, y = month,group=month))
+
+ggplot(weather, aes(x = mean.tem, y = month, fill=factor(..quantile..))) +
+  stat_density_ridges(
+    geom = "density_ridges_gradient", calc_ecdf = TRUE,
+    quantiles = 4, quantile_lines = TRUE ) +
+  scale_fill_viridis(discrete = TRUE, name = "Quartiles") +
+  theme_tufte(base_family = "Helvetica")
+
+table(call$age)
+table(call$sex)
+table(call$gu) ; length(unique(call$gu))
+
+######### Map ######### 
+
+ll <- read.csv('seoul.csv')
+rr <- read_csv('id_seoul_gu.csv')
+dong <- read_csv('id_dong.csv')
+dong <- dong[,-3]
+colnames(dong) <- c("id","dong","lat","lon")
+
+my.map <- function(food,opt){
+  t = call %>% filter(type==food) %>%
+    group_by(gu) %>%
+    summarize(sum.call = sum(call, na.rm = TRUE))
+  total <- merge(t,rr,by='gu',all=FALSE)
+  seoul <- merge(ll, total, by='id')
+  
+  ggplot() + theme_void() +
+    scale_fill_viridis(option = opt) + 
+    geom_polygon(data=seoul,alpha=.75,
+                 aes(x=long, y=lat, group=group, fill=sum.call)) 
+    
+}
+my.map("중국집","D") # 강남구 1등
+my.map("피자","D") # 강서구 1등
+my.map("치킨","D") # 강서구 1등
+figure <- ggarrange(my.map("치킨","D"),my.map("피자","D"),
+                    common.legend = TRUE, legend="bottom",ncol=2)
+annotate_figure(figure,
+                top = text_grob("Density plot",face = "bold", size = 16))  
+
+gangnam_ch <- call %>% filter(gu=="강남구" & type=="중국집") %>% 
+      group_by(dong) %>% summarise(call = sum(call, na.rm = TRUE))
+gangnam <-  merge(gangnam_ch ,dong, by='dong')  
+gangnam <- gangnam[-8,]
+
+center <- c(mean(gangnam$lon),mean(gangnam$lat))
+map <- get_map(center, zoom = 13, maptype ='roadmap')
+ggmap(map) + geom_point(data=gangnam, aes(x=lon, y=lat, size=call, colour=call)) +
+  scale_color_gradient(low='blue', high='red')
 
 
 
-unique(chicken$기준일)
-chicken <- chicken[,c(1,2,3,4,6,7,9)]
-colnames(chicken) <- c('date','yoil','sex','age','gu','dong','call')
-chicken$date <- as.numeric(chicken$date)
-chicken <- mutate(month = as.numeric(substr(date,5,6)), 
-                 day = as.numeric(substr(date,7,8)))
+
+library(leaflet)
+leaflet(data = gangnam) %>% addTiles() %>%
+  addCircleMarkers(lat = ~lat,lng = ~lon,
+                   popup=paste(gangnam$dong,'<br>','Call :',gangnam$call),
+                   opacity = 0.6, radius = gangnam$call/1000) # 반지름은 남은 자전거 수에 비례
+
+
+center <- c(mean(seoul$long),mean(seoul$lat))
+map <- get_map(center, zoom = 11, maptype ='roadmap',color='bw')
+ggmap(map) + geom_polygon(data=seoul,alpha=.75,
+                          aes(x=long, y=lat, group=group, fill=sum.call)) +
+  scale_fill_viridis()
 
 
 
-table(chicken$age)
-table(chicken$sex)
-table(chicken$gu) ; length(unique(chicken$gu))
-t = chicken %>%
-  group_by(gu,age) %>%
-  summarize(sum.call = sum(call, na.rm = TRUE))
 
-seoul <- read_csv('seoul.csv')
-rr <- read.csv('id_seoul_gu.csv')
-
-total <- merge(t,rr,by='gu',all=FALSE)
-
-seoul <- merge(seoul, total, by='id')
-
-ggplot() +  
-  scale_fill_viridis(option = "A") + 
-  geom_polygon(data=seoul,alpha=.75,
-               aes(x=long, y=lat, group=group, fill=sum.call)) + 
-  theme_void() 
