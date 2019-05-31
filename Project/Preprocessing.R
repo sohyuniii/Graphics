@@ -79,3 +79,24 @@ e = apply(filter(total,date=="2019-01-05" & (id==410 | id==509))[,c(4,5,6,7,8,9)
 ex = data.frame(date="2019-01-05",id="417",'district'="금천구")
 
 write.csv(total,"weather_TOTAL.csv")
+
+###### Data3 -> air pollution ######
+library(tidyr)
+ozon4 <- read.csv('ozon4.csv')
+ozon4 <- ozon4[,1:31]
+ozon3 <- read.csv('ozon3.csv')
+ozon2 <- read.csv('ozon2.csv')
+ozon2 <- ozon2[,1:29]
+ozon1 <- read.csv('ozon1.csv')
+
+ozon4 <- gather(ozon4,day,ozon,2:31) %>% mutate(month=rep(4,30*25))
+ozon3 <- gather(ozon3,day,ozon,2:32) %>% mutate(month=rep(3,31*25))
+ozon2 <- gather(ozon2,day,ozon,2:29) %>% mutate(month=rep(2,28*25))
+ozon1 <- gather(ozon1,day,ozon,2:32) %>% mutate(month=rep(1,31*25))
+ozon <- rbind(ozon1,ozon2,ozon3,ozon4)
+
+air <- merge(ozon,nano,by=c('gu','month','day'))
+air$day = as.numeric(gsub("X","",air$day))
+total <- merge(dust,air,by=c("gu","month","day"))
+colSums(is.na(total)) # ozon 5개
+write.csv(total,"airpollution.csv")
