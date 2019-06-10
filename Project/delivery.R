@@ -14,29 +14,42 @@ setwd("C:/Users/user/Desktop/I/ewha2/Graphics/Project/Data")
 options("scipen" = 100)
 
 call <- read.csv("CALL_TOTAL.csv",stringsAsFactors = FALSE)
-call$month <- substr(call$month,1,2)
+call$month <- as.integer(substr(call$month,1,1))
 
-ggplot(data=call, aes(x=gu, y=call, fill=type)) + 
-  geom_bar(position = 'stack', stat='identity')
+call %>% group_by(type) %>% summarize(call = sum(call)) %>%
+  ggplot(aes(type,call,fill=type)) + geom_bar(stat='identity') + labs(x="",y="") +
+  theme_hc() + scale_fill_manual(values = c("red", "orange", "yellow") )
 
+call %>% group_by(month) %>% summarize(call = sum(call)) %>%
+  ggplot(aes(month,call,fill=month)) + geom_bar(stat='identity') + labs(x="",y="") +
+  theme_hc() + scale_fill_viridis(option="magma") + coord_flip() +
+  geom_text(aes(label=call), position=position_dodge(width=0.9), vjust=-0.5)
 
 call %>% group_by(sex,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
   ggplot(mapping = aes(x = type, y = sex)) + 
-  geom_tile(mapping = aes(fill = sum.call)) +
+  geom_tile(mapping = aes(fill = sum.call)) + theme_hc()+
   scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
   guides(fill = guide_legend(title = "통화건수", title.position = "top"))
 
 call %>% group_by(age,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
-  ggplot(mapping = aes(x = type, y = age)) + 
+  ggplot(mapping = aes(x = type, y = age)) + theme_hc()+
   geom_tile(mapping = aes(fill = sum.call)) +
   scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
   guides(fill = guide_legend(title = "통화건수", title.position = "top"))
 
-call %>% group_by(yoil,type) %>% summarize(sum.call = sum(call, na.rm = TRUE)) %>% 
-  ggplot(mapping = aes(x = type, y = yoil)) + 
-  geom_tile(mapping = aes(fill = sum.call)) +
-  scale_fill_gradient(low = "yellow", high = "red") + labs(x="",y="") +
-  guides(fill = guide_legend(title = "통화건수", title.position = "top"))
+# Rollipop chart
+data = call %>% group_by(yoil,type) %>% summarize(sum.call = sum(call, na.rm = TRUE))
+data$yoil <- factor(data$yoil, levels=c("일","토",'금','목','수','화','월'))
+ggplot(data, aes(x=yoil, y=sum.call,label = round(sum.call))) +
+  geom_segment( aes(x=yoil, xend=yoil, y=0, yend=sum.call), color="grey", size=1) +
+  geom_point( color="orange", size=4, alpha=0.6) +
+  theme_light() + geom_text(nudge_x = 0.2) +
+  coord_flip() +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank()
+  ) + labs(x="",y="") + facet_wrap(~type) 
 
 ######### Calender #########
 
@@ -127,8 +140,45 @@ ggplot(data=search) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("2019년 4월 검색어 통계량")
 
+### 블랙데이 ###
+chine <- call %>% filter(type=='중국음식' & yoil=="일") %>%
+  group_by(date,sex,age) %>% summarize(call = sum(call, na.rm = TRUE)) 
+dd <- chine %>% group_by(date) %>% summarize(call = sum(call))
+dd$black <- ifelse(dd$date=='2019-04-14',"YES","NO")
+dd$date <- substr(dd$date,6,10)
+
+ggplot(dd, aes(date,call,fill=black)) + theme_hc() +
+  geom_col(colour = "black", size = .25) + labs(x='날짜',y='') +
+  scale_fill_manual(values = c("#f7f7f7", "#000000"), guide = FALSE)
+
+no <- call %>% filter(type=='중국음식' & yoil=="일" & month=='4월') %>%
+  filter(date!='2019-04-14') %>% 
+  group_by(sex,age) %>% summarize(call = sum(call)/3)
+black <- call %>% filter(type=='중국음식' & date=='2019-04-14') %>% 
+  group_by(sex,age) %>% summarize(call = sum(call))
 
 
+b = (black %>% group_by(sex,age) %>% filter(sex=='여') %>%
+       summarize(call = sum(call)))
+n = (no %>% group_by(age) %>% filter(sex=='여') %>%
+       summarize(call = sum(call)))
+ratio <- data.frame(age=b$age,black=b$call,no=n$call)
+ratio_m <- ratio %>% mutate(r = (black-no)/no, sex='남자',
+                          plus_minus = ifelse(r>0, 'plus','minus'))
+ratio_w <- ratio %>% mutate(r = (black-no)/no, sex='여자',
+                          plus_minus = ifelse(r>0, 'plus','minus'))
+
+ratio <- rbind(ratio_m,ratio_w)[,c(1,4,5,6)]
+  
+ggplot(ratio,aes(x=age, y=r, fill=plus_minus)) + 
+  geom_bar(stat="identity", position="identity", colour="white", width=0.2) + # width 막대 폭 좁게
+  scale_fill_manual(values=c("red", "dark blue"), guide=FALSE) + # guide=F 범례 생략
+  theme_hc() + facet_grid(~sex)
+
+### 강서구 - 치킨 ###
+gangseo <- call %>% filter(gu=="강서구" & type!="중국음식")  
+unique(gangseo$dong)
+  group_by(type,dong) %>% summarise(call = sum(call, na.rm = TRUE))
 
 ######### Map ######### 
 
@@ -158,6 +208,7 @@ p2 <- map_fun("치킨") + ggtitle("치킨")
 p3 <- map_fun("중국음식") + ggtitle("중국음식")
 p2 + p1 + p3 + plot_layout(ncol = 3)
 
+### 강남구 - 중국집 ###
 gangnam_ch <- call %>% filter(gu=="강남구" & type=="중국집") %>% 
       group_by(dong) %>% summarise(call = sum(call, na.rm = TRUE))
 gangnam <-  merge(gangnam_ch ,dong, by='dong')  
@@ -168,22 +219,13 @@ map <- get_map(center, zoom = 13, maptype ='roadmap')
 ggmap(map) + geom_point(data=gangnam, aes(x=lon, y=lat, size=call, colour=call)) +
   scale_color_gradient(low='blue', high='red')
 
+### 강서구 - 치킨/피자 ###
+gangseo <- call %>% filter(gu=="강서구" & type!="중국음식") %>% 
+  group_by(type,dong) %>% summarise(call = sum(call, na.rm = TRUE))
+gangseo <-  merge(gangseo ,dong, by='dong')  
+gangseo <- gangseo[-8,]
 
-
-
-library(leaflet)
-leaflet(data = gangnam) %>% addTiles() %>%
-  addCircleMarkers(lat = ~lat,lng = ~lon,
-                   popup=paste(gangnam$dong,'<br>','Call :',gangnam$call),
-                   opacity = 0.6, radius = gangnam$call/1000) # 반지름은 남은 자전거 수에 비례
-
-
-center <- c(mean(seoul$long),mean(seoul$lat))
-map <- get_map(center, zoom = 11, maptype ='roadmap',color='bw')
-ggmap(map) + geom_polygon(data=seoul,alpha=.75,
-                          aes(x=long, y=lat, group=group, fill=sum.call)) +
-  scale_fill_viridis()
-
-
-
-
+center <- c(mean(gangseo$lon),mean(gangseo$lat))
+map <- get_map(center, zoom = 13, maptype ='roadmap')
+ggmap(map) + geom_point(data=gangseo, aes(x=lon, y=lat, size=call, colour=call)) +
+  scale_color_gradient(low='blue', high='red') + facet_grid(~type)
